@@ -35,7 +35,7 @@ parser.add_argument("--preprocess", action='store_true', help="run preprocess_da
 parser.add_argument("--dataset", type=str, default="ISIC2017", help='ISIC2017 / ISIC2016')
 
 # changed 32 to 8
-parser.add_argument("--batch_size", type=int, default=8, help="batch size")
+parser.add_argument("--batch_size", type=int, default=32, help="batch size")
 parser.add_argument("--epochs", type=int, default=50, help="number of epochs")
 parser.add_argument("--lr", type=float, default=0.01, help="initial learning rate")
 parser.add_argument("--outf", type=str, default="logs", help='path of log files')
@@ -139,6 +139,7 @@ def main():
         data_iter = iter(valloader)
         fixed_batch = next(data_iter)
         fixed_batch = fixed_batch['image'][0:16,:,:,:].to(device)
+
     for epoch in range(opt.epochs):
         torch.cuda.empty_cache()
         current_lr = optimizer.param_groups[0]['lr']
@@ -146,7 +147,10 @@ def main():
         print("\nepoch %d learning rate %f\n" % (epoch+1, current_lr))
         # run for one epoch
         for aug in range(num_aug):
+            # Added this line
+            torch.cuda.empty_cache()
             for i, data in enumerate(trainloader, 0):
+                torch.cuda.empty_cache()
                 # warm up
                 model.train()
                 model.zero_grad()
