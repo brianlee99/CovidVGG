@@ -98,7 +98,7 @@ class RandomRotate(object):
         image, image_seg, label = sample['image'], sample['image_seg'], sample['label']
         angle = self.get_params()
         img = trF.rotate(image, angle, self.resample, self.expand, self.center)
-        img_seg = trF.rotate(image_seg, angle, self.resample, self.expand, self.center)
+        img_seg = trF.rotate(image_seg, angle, self.resample, self.expand, self.center, fill=(0,))
         return {'image': img, 'image_seg': img_seg, 'label': label}
 
 

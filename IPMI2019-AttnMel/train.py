@@ -34,7 +34,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--preprocess", action='store_true', help="run preprocess_data")
 parser.add_argument("--dataset", type=str, default="ISIC2017", help='ISIC2017 / ISIC2016')
 
-parser.add_argument("--batch_size", type=int, default=32, help="batch size")
+# changed 32 to 8
+parser.add_argument("--batch_size", type=int, default=8, help="batch size")
 parser.add_argument("--epochs", type=int, default=50, help="number of epochs")
 parser.add_argument("--lr", type=float, default=0.01, help="initial learning rate")
 parser.add_argument("--outf", type=str, default="logs", help='path of log files')
