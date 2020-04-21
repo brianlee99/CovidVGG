@@ -13,7 +13,7 @@ import torchvision.utils as utils
 import torchvision.transforms as torch_transforms
 from networks import AttnVGG, VGG
 from loss import FocalLoss
-from data import preprocess_data_2016, preprocess_data_2017, ISIC
+from data import preprocess_data, ISIC
 from utilities import *
 from transforms import *
 
@@ -31,11 +31,11 @@ parser.add_argument("--preprocess", action='store_true', help="run preprocess_da
 parser.add_argument("--dataset", type=str, default="ISIC2017", help='ISIC2017 / ISIC2016')
 
 parser.add_argument("--outf", type=str, default="logs_test", help='path of log files')
-parser.add_argument("--base_up_factor", type=int, default=8, help="number of epochs")
+parser.add_argument("--base_up_factor", type=int, default=8, help="base up factor")
 
 parser.add_argument("--normalize_attn", action='store_true', help='if True, attention map is normalized by softmax; otherwise use sigmoid')
 parser.add_argument("--no_attention", action='store_true', help='turn off attention')
-parser.add_argument("--log_images", action='store_true', help='visualze images in Tensoeboard')
+parser.add_argument("--log_images", action='store_true', help='visualze images in Tensorboard')
 
 opt = parser.parse_args()
 
@@ -54,6 +54,12 @@ def main():
     testloader = torch.utils.data.DataLoader(testset, batch_size=64, shuffle=False, num_workers=8)
     print('done\n')
 
+
+    test_results = pd.DataFrame(columns=[
+        'AP', 'AUC', 'accuracy', 'mean_precision', 'mean_recall', 'precision_mel', 'recall_mel'
+    ])
+    test_row = {'AP': 0, 'AUC': 0, 'accuracy': 0, 'mean_precision': 0, 'mean_recall': 0, 'precision_mel': 0, 'recall_mel': 0}
+
     # load network
     print('\nloading the model ...')
     if not opt.no_attention:
@@ -67,7 +73,7 @@ def main():
 
     net = AttnVGG(num_classes=2, attention=not opt.no_attention, normalize_attn=opt.normalize_attn)
     # net = VGG(num_classes=2, gap=False)
-    checkpoint = torch.load('checkpoint.pth')
+    checkpoint = torch.load('logs/checkpoint.pth')
     net.load_state_dict(checkpoint['state_dict'])
     model = nn.DataParallel(net, device_ids=device_ids).to(device)
     model.eval()
@@ -101,11 +107,24 @@ def main():
                         __, a1, a2 = model(images_test)
                         if a1 is not None:
                             attn1 = visualize_attn(I_test, a1, up_factor=opt.base_up_factor, nrow=8)
+
+
                             writer.add_image('test/attention_map_1', attn1, i)
                         if a2 is not None:
                             attn2 = visualize_attn(I_test, a2, up_factor=2*opt.base_up_factor, nrow=8)
                             writer.add_image('test/attention_map_2', attn2, i)
     AP, AUC, precision_mean, precision_mel, recall_mean, recall_mel = compute_metrics('test_results.csv', 'test.csv')
+
+    test_row['accuracy'] = accuracy
+    test_row['mean_precision'] = precision_mean
+    test_row['mean_recall'] = recall_mean
+    test_row['precision_mel'] = precision_mel
+    test_row['recall_mel'] = recall_mel
+    test_row['AP'] = AP
+    test_row['AUC'] = AUC
+    test_results = test_results.append(test_row, ignore_index=True)
+    test_results.to_csv('test_results.csv')
+
     print("\ntest result: accuracy %.2f%%" % (100*correct/total))
     print("\nmean precision %.2f%% mean recall %.2f%% \nprecision for mel %.2f%% recall for mel %.2f%%" %
             (100*precision_mean, 100*recall_mean, 100*precision_mel, 100*recall_mel))

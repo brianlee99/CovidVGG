@@ -3,6 +3,7 @@ import csv
 import random
 import argparse
 import numpy as np
+import pandas as pd
 
 import torch
 import torch.nn as nn
@@ -34,9 +35,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--preprocess", action='store_true', help="run preprocess_data")
 # parser.add_argument("--dataset", type=str, default="ISIC2017", help='ISIC2017 / ISIC2016')
 
-# changed 32 to 8
 parser.add_argument("--batch_size", type=int, default=32, help="batch size")
-parser.add_argument("--epochs", type=int, default=50, help="number of epochs")
+# change 50 -> 100 and get rid of num_augs
+parser.add_argument("--epochs", type=int, default=100, help="number of epochs")
 parser.add_argument("--lr", type=float, default=0.01, help="initial learning rate")
 parser.add_argument("--outf", type=str, default="logs", help='path of log files')
 parser.add_argument("--base_up_factor", type=int, default=8, help="upsample ratio for attention visualization")
@@ -45,7 +46,7 @@ parser.add_argument("--normalize_attn", action='store_true', help='if True, atte
 parser.add_argument("--focal_loss", action='store_true', help='turn on focal loss (otherwise use cross entropy loss)')
 parser.add_argument("--no_attention", action='store_true', help='turn off attention')
 parser.add_argument("--over_sample", action='store_true', help='offline oversampling')
-parser.add_argument("--log_images", action='store_true', help='visualze images in Tensoeboard')
+parser.add_argument("--log_images", action='store_true', help='visualze images in Tensorboard')
 
 opt = parser.parse_args()
 
@@ -59,7 +60,18 @@ def main():
     # load data
     print('\nloading the dataset ...')
 
-    num_aug = 5
+    train_results = pd.DataFrame(columns=[
+        'EMA_accuracy',
+        'accuracy',
+        'learning_rate',
+        'loss_c', 'epoch'
+    ])
+    val_results = pd.DataFrame(columns=[
+        'AP', 'AUC', 'accuracy', 'mean_precision', 'mean_recall', 'precision_mel', 'recall_mel', 'epoch'
+    ])
+
+    # changed from 5 -> 1
+    num_aug = 1
     normalize = Normalize((0.5500, 0.5506, 0.5520), (0.1788, 0.1786, 0.1787))
 
     if opt.over_sample:
@@ -73,8 +85,9 @@ def main():
          Resize((256,256)),
          RandomCrop((224,224)),
          RandomRotate(),
+         RandomTranslation(),
          RandomHorizontalFlip(),
-         # RandomVerticalFlip(),
+         RandomAdjustContrast(),
          ToTensor(),
          normalize
     ])
@@ -131,7 +144,7 @@ def main():
     step = 0
     EMA_accuracy = 0
     AUC_val = 0
-    writer = SummaryWriter(opt.outf)
+    writer = SummaryWriter('logs/exp1')
     if opt.log_images:
         data_iter = iter(valloader)
         fixed_batch = next(data_iter)
@@ -139,8 +152,12 @@ def main():
 
     for epoch in range(opt.epochs):
         torch.cuda.empty_cache()
+        train_row = {'EMA_accuracy': 0, 'accuracy': 0, 'learning_rate': 0, 'loss_c': 0, 'epoch': epoch+1}
+        val_row = {'AP': 0, 'AUC': 0, 'accuracy': 0, 'mean_precision': 0, 'mean_recall': 0, 'precision_mel': 0, 'recall_mel': 0, 'epoch': epoch+1}
+
         current_lr = optimizer.param_groups[0]['lr']
         writer.add_scalar('train/learning_rate', current_lr, epoch)
+        train_row['learning_rate'] = current_lr
         print("\nepoch %d learning rate %f\n" % (epoch+1, current_lr))
         # run for one epoch
         for aug in range(num_aug):
@@ -171,6 +188,9 @@ def main():
                 writer.add_scalar('train/loss_c', loss.item(), step)
                 writer.add_scalar('train/accuracy', accuracy, step)
                 writer.add_scalar('train/EMA_accuracy', EMA_accuracy, step)
+                train_row['loss_c'] = loss.item()
+                train_row['accuracy'] = accuracy
+                train_row['EMA_accuracy'] = EMA_accuracy
                 print("[epoch %d][aug %d/%d][iter %d/%d] loss %.4f accuracy %.2f%% EMA_accuracy %.2f%%"
                     % (epoch+1, aug+1, num_aug, i+1, len(trainloader), loss.item(), (100*accuracy), (100*EMA_accuracy)))
                 step += 1
@@ -206,13 +226,21 @@ def main():
                 torch.save(checkpoint, os.path.join(opt.outf,'checkpoint.pth'))
                 AUC_val = AUC
             # log scalars
-            writer.add_scalar('val/accuracy', correct/total, epoch)
+            accuracy = correct/total
+            writer.add_scalar('val/accuracy', accuracy, epoch)
             writer.add_scalar('val/mean_precision', precision_mean, epoch)
             writer.add_scalar('val/mean_recall', recall_mean, epoch)
             writer.add_scalar('val/precision_mel', precision_mel, epoch)
             writer.add_scalar('val/recall_mel', recall_mel, epoch)
             writer.add_scalar('val/AP', AP, epoch)
             writer.add_scalar('val/AUC', AUC, epoch)
+            val_row['accuracy'] = accuracy
+            val_row['mean_precision'] = precision_mean
+            val_row['mean_recall'] = recall_mean
+            val_row['precision_mel'] = precision_mel
+            val_row['recall_mel'] = recall_mel
+            val_row['AP'] = AP
+            val_row['AUC'] = AUC
             print("\n[epoch %d] val result: accuracy %.2f%%" % (epoch+1, 100*correct/total))
             print("\nmean precision %.2f%% mean recall %.2f%% \nprecision for mel %.2f%% recall for mel %.2f%%" %
                     (100*precision_mean, 100*recall_mean, 100*precision_mel, 100*recall_mel))
@@ -243,6 +271,12 @@ def main():
                 if a2 is not None:
                     attn2 = visualize_attn(I_val, a2, up_factor=2*opt.base_up_factor, nrow=4)
                     writer.add_image('val/attention_map_2', attn2, epoch)
+        # Append the row to the dataframes
+        train_results = train_results.append(train_row, ignore_index=True)
+        val_results = val_results.append(val_row, ignore_index=True)
+    # write to csvs
+    train_results.to_csv('train_results.csv')
+    val_results.to_csv('val_results.csv')
 
 if __name__ == "__main__":
     preprocess_data(root_dir='../ImageDataSet/Xray')

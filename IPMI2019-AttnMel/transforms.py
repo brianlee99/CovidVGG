@@ -146,3 +146,35 @@ class Normalize(object):
         image, image_seg, label = sample['image'], sample['image_seg'], sample['label']
         img = trF.normalize(image, self.mean, self.std)
         return {'image': img, 'image_seg': image_seg, 'label': label}
+
+"""
+Randomly sets the contrast between 0.9 and 1.1 of the original contrast.
+"""
+class RandomAdjustContrast(object):
+    @staticmethod
+    def get_params():
+        contrast_factor = random.uniform(0.9, 1.1)
+        return contrast_factor
+
+    def __call__(self, sample):
+        image, image_seg, label = sample['image'], sample['image_seg'], sample['label']
+        contrast_factor = self.get_params()
+        img = trF.adjust_contrast(image, contrast_factor)
+        return {'image': img, 'image_seg': image_seg, 'label': label}
+
+
+"""
+Randomly applies an affine translation 5% of width, and 5% of height in either direction.
+"""
+class RandomTranslation(object):
+    @staticmethod
+    def get_params():
+        horiz = random.uniform(-10, 10)
+        vert = random.uniform(-10, 10)
+        return (horiz, vert)
+
+    def __call__(self, sample):
+        image, image_seg, label = sample['image'], sample['image_seg'], sample['label']
+        horiz, vert = self.get_params()
+        img = trF.affine(image, angle=0, translate=(horiz, vert), scale=1, shear=0)
+        return {'image': img, 'image_seg': image_seg, 'label': label}
