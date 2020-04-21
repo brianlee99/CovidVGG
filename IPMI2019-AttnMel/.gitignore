@@ -1,3 +1,7 @@
 .ipynb_checkpoints/
 __pycache__/
 logs/
+train.csv
+val.csv
+test.csv
+val_results.csv
