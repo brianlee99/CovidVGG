@@ -90,8 +90,9 @@ class RandomRotate(object):
 
     @staticmethod
     def get_params():
-        idx = random.randint(0,3)
-        angle = idx * 90
+        # idx = random.randint(0,3)
+        # angle = idx * 90
+        angle = random.uniform(-10, 10)
         return angle
 
     def __call__(self, sample):

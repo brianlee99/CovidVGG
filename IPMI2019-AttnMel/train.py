@@ -74,7 +74,7 @@ def main():
          RandomCrop((224,224)),
          RandomRotate(),
          RandomHorizontalFlip(),
-         RandomVerticalFlip(),
+         # RandomVerticalFlip(),
          ToTensor(),
          normalize
     ])
