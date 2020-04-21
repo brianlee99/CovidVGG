@@ -17,7 +17,7 @@ import torchvision.transforms as torch_transforms
 
 from networks import AttnVGG, VGG
 from loss import FocalLoss
-from data import preprocess_data_2016, preprocess_data_2017, ISIC
+from data import preprocess_data, ISIC
 from utilities import *
 from transforms import *
 
@@ -32,7 +32,7 @@ device_ids = [0]
 parser = argparse.ArgumentParser()
 
 parser.add_argument("--preprocess", action='store_true', help="run preprocess_data")
-parser.add_argument("--dataset", type=str, default="ISIC2017", help='ISIC2017 / ISIC2016')
+# parser.add_argument("--dataset", type=str, default="ISIC2017", help='ISIC2017 / ISIC2016')
 
 # changed 32 to 8
 parser.add_argument("--batch_size", type=int, default=32, help="batch size")
@@ -58,13 +58,18 @@ def _worker_init_fn_():
 def main():
     # load data
     print('\nloading the dataset ...')
-    assert opt.dataset == "ISIC2016" or opt.dataset == "ISIC2017"
-    if opt.dataset == "ISIC2016":
-        num_aug = 5
-        normalize = Normalize((0.7012, 0.5517, 0.4875), (0.0942, 0.1331, 0.1521))
-    elif opt.dataset == "ISIC2017":
-        num_aug = 2
-        normalize = Normalize((0.6820, 0.5312, 0.4736), (0.0840, 0.1140, 0.1282))
+
+    num_aug = 5
+    # We might have to change the below value....
+    normalize = Normalize((0.7012, 0.5517, 0.4875), (0.0942, 0.1331, 0.1521))
+
+    # if opt.dataset == "ISIC2016":
+    #     num_aug = 5
+    #     normalize = Normalize((0.7012, 0.5517, 0.4875), (0.0942, 0.1331, 0.1521))
+    # elif opt.dataset == "ISIC2017":
+    #     num_aug = 2
+    #     normalize = Normalize((0.6820, 0.5312, 0.4736), (0.0840, 0.1140, 0.1282))
+
     if opt.over_sample:
         print('data is offline oversampled ...')
         train_file = 'train_oversample.csv'
@@ -250,8 +255,5 @@ def main():
 
 if __name__ == "__main__":
     if opt.preprocess:
-        if opt.dataset == "ISIC2016":
-            preprocess_data_2016(root_dir='data_2016')
-        elif opt.dataset == "ISIC2017":
-            preprocess_data_2017(root_dir='data_2017', seg_dir='Train_Lesion')
+        preprocess_data(root_dir='../ImageDataSet/Xray')
     main()
