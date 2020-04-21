@@ -42,11 +42,7 @@ opt = parser.parse_args()
 def main():
     # load data
     print('\nloading the dataset ...')
-    assert opt.dataset == "ISIC2016" or opt.dataset == "ISIC2017"
-    if opt.dataset == "ISIC2016":
-        normalize = Normalize((0.7012, 0.5517, 0.4875), (0.0942, 0.1331, 0.1521))
-    elif opt.dataset == "ISIC2017":
-        normalize = Normalize((0.6820, 0.5312, 0.4736), (0.0840, 0.1140, 0.1282))
+    normalize = Normalize((0.5500, 0.5506, 0.5520), (0.1788, 0.1786, 0.1787))
     transform_test = torch_transforms.Compose([
          RatioCenterCrop(0.8),
          Resize((256,256)),
@@ -116,9 +112,6 @@ def main():
     print("\nAP %.4f AUC %.4f\n" % (AP, AUC))
 
 if __name__ == "__main__":
-    if opt.preprocess:
-        if opt.dataset == "ISIC2016":
-            preprocess_data_2016(root_dir='../data_2016')
-        elif opt.dataset == "ISIC2017":
-            preprocess_data_2017(root_dir='../data_2017', seg_dir='Train_Lesion')
+    # if opt.preprocess:
+    #     preprocess_data(root_dir='../ImageDataSet/Xray')
     main()

@@ -60,15 +60,7 @@ def main():
     print('\nloading the dataset ...')
 
     num_aug = 5
-    # We might have to change the below value....
-    normalize = Normalize((0.7012, 0.5517, 0.4875), (0.0942, 0.1331, 0.1521))
-
-    # if opt.dataset == "ISIC2016":
-    #     num_aug = 5
-    #     normalize = Normalize((0.7012, 0.5517, 0.4875), (0.0942, 0.1331, 0.1521))
-    # elif opt.dataset == "ISIC2017":
-    #     num_aug = 2
-    #     normalize = Normalize((0.6820, 0.5312, 0.4736), (0.0840, 0.1140, 0.1282))
+    normalize = Normalize((0.5500, 0.5506, 0.5520), (0.1788, 0.1786, 0.1787))
 
     if opt.over_sample:
         print('data is offline oversampled ...')
