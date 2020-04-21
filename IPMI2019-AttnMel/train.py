@@ -169,19 +169,18 @@ def main():
                 loss.backward()
                 optimizer.step()
                 # display results
-                if i % 10 == 0:
-                    model.eval()
-                    pred, __, __ = model(inputs)
-                    predict = torch.argmax(pred, 1)
-                    total = labels.size(0)
-                    correct = torch.eq(predict, labels).sum().double().item()
-                    accuracy = correct / total
-                    EMA_accuracy = 0.9*EMA_accuracy + 0.1*accuracy
-                    writer.add_scalar('train/loss_c', loss.item(), step)
-                    writer.add_scalar('train/accuracy', accuracy, step)
-                    writer.add_scalar('train/EMA_accuracy', EMA_accuracy, step)
-                    print("[epoch %d][aug %d/%d][iter %d/%d] loss %.4f accuracy %.2f%% EMA_accuracy %.2f%%"
-                        % (epoch+1, aug+1, num_aug, i+1, len(trainloader), loss.item(), (100*accuracy), (100*EMA_accuracy)))
+                model.eval()
+                pred, __, __ = model(inputs)
+                predict = torch.argmax(pred, 1)
+                total = labels.size(0)
+                correct = torch.eq(predict, labels).sum().double().item()
+                accuracy = correct / total
+                EMA_accuracy = 0.9*EMA_accuracy + 0.1*accuracy
+                writer.add_scalar('train/loss_c', loss.item(), step)
+                writer.add_scalar('train/accuracy', accuracy, step)
+                writer.add_scalar('train/EMA_accuracy', EMA_accuracy, step)
+                print("[epoch %d][aug %d/%d][iter %d/%d] loss %.4f accuracy %.2f%% EMA_accuracy %.2f%%"
+                    % (epoch+1, aug+1, num_aug, i+1, len(trainloader), loss.item(), (100*accuracy), (100*EMA_accuracy)))
                 step += 1
         # adjust learning rate
         scheduler.step()
@@ -254,6 +253,5 @@ def main():
                     writer.add_image('val/attention_map_2', attn2, epoch)
 
 if __name__ == "__main__":
-    if opt.preprocess:
-        preprocess_data(root_dir='../ImageDataSet/Xray')
+    preprocess_data(root_dir='../ImageDataSet/Xray')
     main()

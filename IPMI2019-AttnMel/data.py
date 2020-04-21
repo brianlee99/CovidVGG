@@ -184,10 +184,12 @@ class ISIC(udata.Dataset):
         return len(self.pairs)
     def  __getitem__(self, idx):
         pair = self.pairs[idx]
-        image = Image.open(pair[0])
-        label = int(pair[1])
+        image = Image.open(pair[0]).convert('RGB')
+        image_seg = Image.open(pair[1]).convert('L')
+        label = int(pair[2])
+        
         # construct one sample
-        sample = {'image': image, 'label': label}
+        sample = {'image': image, 'image_seg': image_seg, 'label': label}
         # transform
         if self.transform:
             sample = self.transform(sample)
