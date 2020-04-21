@@ -90,9 +90,7 @@ class RandomRotate(object):
 
     @staticmethod
     def get_params():
-        # idx = random.randint(0,3)
-        # angle = idx * 90
-        angle = random.uniform(-10, 10)
+        angle = random.uniform(-5, 5)
         return angle
 
     def __call__(self, sample):
@@ -164,7 +162,7 @@ class RandomAdjustContrast(object):
 
 
 """
-Randomly applies an affine translation 5% of width, and 5% of height in either direction.
+Randomly applies an affine translation 10 pixels up/down, and left/right.
 """
 class RandomTranslation(object):
     @staticmethod

@@ -57,9 +57,9 @@ def main():
 
 
     test_results = pd.DataFrame(columns=[
-        'AP', 'AUC', 'accuracy', 'mean_precision', 'mean_recall', 'precision_mel', 'recall_mel'
+        'AP', 'AUC', 'accuracy', 'mean_precision', 'mean_recall', 'precision_mel', 'sensitivity', 'specificity'
     ])
-    test_row = {'AP': 0, 'AUC': 0, 'accuracy': 0, 'mean_precision': 0, 'mean_recall': 0, 'precision_mel': 0, 'recall_mel': 0}
+    test_row = {'AP': 0, 'AUC': 0, 'accuracy': 0, 'mean_precision': 0, 'mean_recall': 0, 'precision_mel': 0, 'sensitivity': 0, 'specificity': 0}
 
     # load network
     print('\nloading the model ...')
@@ -108,27 +108,26 @@ def main():
                         __, a1, a2 = model(images_test)
                         if a1 is not None:
                             attn1 = visualize_attn(I_test, a1, up_factor=opt.base_up_factor, nrow=8)
-
-
                             writer.add_image('test/attention_map_1', attn1, i)
                         if a2 is not None:
                             attn2 = visualize_attn(I_test, a2, up_factor=2*opt.base_up_factor, nrow=8)
                             writer.add_image('test/attention_map_2', attn2, i)
-    AP, AUC, precision_mean, precision_mel, recall_mean, recall_mel = compute_metrics('test_results.csv', 'test.csv')
+    AP, AUC, precision_mean, precision_mel, recall_mean, sensitivity, specificity = compute_metrics('test_results.csv', 'test.csv')
 
-    test_row['accuracy'] = accuracy
+    test_row['accuracy'] = correct/total
     test_row['mean_precision'] = precision_mean
     test_row['mean_recall'] = recall_mean
     test_row['precision_mel'] = precision_mel
-    test_row['recall_mel'] = recall_mel
+    test_row['sensitivity'] = sensitivity
+    test_row['specificity'] = specificity
     test_row['AP'] = AP
     test_row['AUC'] = AUC
     test_results = test_results.append(test_row, ignore_index=True)
-    test_results.to_csv('test_results.csv')
+    test_results.to_csv('test_scores.csv')
 
     print("\ntest result: accuracy %.2f%%" % (100*correct/total))
-    print("\nmean precision %.2f%% mean recall %.2f%% \nprecision for mel %.2f%% recall for mel %.2f%%" %
-            (100*precision_mean, 100*recall_mean, 100*precision_mel, 100*recall_mel))
+    print("\nmean precision %.2f%% mean recall %.2f%% \nprecision for mel %.2f%% recall for mel %.2f%% recall for normal %.2f%%" %
+            (100*precision_mean, 100*recall_mean, 100*precision_mel, 100*sensitivity, 100*specificity))
     print("\nAP %.4f AUC %.4f\n" % (AP, AUC))
 
 if __name__ == "__main__":

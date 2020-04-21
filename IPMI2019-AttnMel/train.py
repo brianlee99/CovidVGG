@@ -37,7 +37,7 @@ parser.add_argument("--preprocess", action='store_true', help="run preprocess_da
 
 parser.add_argument("--batch_size", type=int, default=32, help="batch size")
 # change 50 -> 100 and get rid of num_augs
-parser.add_argument("--epochs", type=int, default=100, help="number of epochs")
+parser.add_argument("--epochs", type=int, default=30, help="number of epochs")
 parser.add_argument("--lr", type=float, default=0.01, help="initial learning rate")
 parser.add_argument("--outf", type=str, default="logs", help='path of log files')
 parser.add_argument("--base_up_factor", type=int, default=8, help="upsample ratio for attention visualization")
@@ -67,11 +67,11 @@ def main():
         'loss_c', 'epoch'
     ])
     val_results = pd.DataFrame(columns=[
-        'AP', 'AUC', 'accuracy', 'mean_precision', 'mean_recall', 'precision_mel', 'recall_mel', 'epoch'
+        'AP', 'AUC', 'accuracy', 'mean_precision', 'mean_recall', 'precision_mel', 'sensitivity', 'specificity', 'epoch'
     ])
 
     # changed from 5 -> 1
-    num_aug = 1
+    num_aug = 3
     normalize = Normalize((0.5500, 0.5506, 0.5520), (0.1788, 0.1786, 0.1787))
 
     if opt.over_sample:
@@ -153,7 +153,7 @@ def main():
     for epoch in range(opt.epochs):
         torch.cuda.empty_cache()
         train_row = {'EMA_accuracy': 0, 'accuracy': 0, 'learning_rate': 0, 'loss_c': 0, 'epoch': epoch+1}
-        val_row = {'AP': 0, 'AUC': 0, 'accuracy': 0, 'mean_precision': 0, 'mean_recall': 0, 'precision_mel': 0, 'recall_mel': 0, 'epoch': epoch+1}
+        val_row = {'AP': 0, 'AUC': 0, 'accuracy': 0, 'mean_precision': 0, 'mean_recall': 0, 'precision_mel': 0, 'sensitivity': 0, 'specificity': 0, 'epoch': epoch+1}
 
         current_lr = optimizer.param_groups[0]['lr']
         writer.add_scalar('train/learning_rate', current_lr, epoch)
@@ -214,7 +214,7 @@ def main():
                     responses = F.softmax(pred_val, dim=1).squeeze().cpu().numpy()
                     responses = [responses[i] for i in range(responses.shape[0])]
                     csv_writer.writerows(responses)
-            AP, AUC, precision_mean, precision_mel, recall_mean, recall_mel = compute_metrics('val_results.csv', 'val.csv')
+            AP, AUC, precision_mean, precision_mel, recall_mean, sensitivity, specificity = compute_metrics('val_results.csv', 'val.csv')
             # save checkpoints
             print('\nsaving checkpoints ...\n')
             checkpoint = {
@@ -231,19 +231,21 @@ def main():
             writer.add_scalar('val/mean_precision', precision_mean, epoch)
             writer.add_scalar('val/mean_recall', recall_mean, epoch)
             writer.add_scalar('val/precision_mel', precision_mel, epoch)
-            writer.add_scalar('val/recall_mel', recall_mel, epoch)
+            writer.add_scalar('val/sensitivity', sensitivity, epoch)
+            writer.add_scalar('val/specificity', specificity, epoch)
             writer.add_scalar('val/AP', AP, epoch)
             writer.add_scalar('val/AUC', AUC, epoch)
             val_row['accuracy'] = accuracy
             val_row['mean_precision'] = precision_mean
             val_row['mean_recall'] = recall_mean
             val_row['precision_mel'] = precision_mel
-            val_row['recall_mel'] = recall_mel
+            val_row['sensitivity'] = sensitivity
+            val_row['specificity'] = specificity
             val_row['AP'] = AP
             val_row['AUC'] = AUC
             print("\n[epoch %d] val result: accuracy %.2f%%" % (epoch+1, 100*correct/total))
-            print("\nmean precision %.2f%% mean recall %.2f%% \nprecision for mel %.2f%% recall for mel %.2f%%" %
-                    (100*precision_mean, 100*recall_mean, 100*precision_mel, 100*recall_mel))
+            print("\nmean precision %.2f%% mean recall %.2f%% \nprecision for mel %.2f%% recall for mel %.2f%% recall for normal %.2f%%" %
+                    (100*precision_mean, 100*recall_mean, 100*precision_mel, 100*sensitivity, 100*specificity))
             print("\nAP %.4f AUC %.4f optimal AUC: %.4f\n" % (AP, AUC, AUC_val))
             # log images
             if opt.log_images:
@@ -275,8 +277,8 @@ def main():
         train_results = train_results.append(train_row, ignore_index=True)
         val_results = val_results.append(val_row, ignore_index=True)
     # write to csvs
-    train_results.to_csv('train_results.csv')
-    val_results.to_csv('val_results.csv')
+    train_results.to_csv('train_scores.csv')
+    val_results.to_csv('val_scores.csv')
 
 if __name__ == "__main__":
     preprocess_data(root_dir='../ImageDataSet/Xray')
